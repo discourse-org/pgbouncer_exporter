@@ -46,6 +46,10 @@ var (
 			"sv_login":   {GAUGE, "Server connections currently in the process of logging in, shown as connection"},
 			"maxwait":    {GAUGE, "Age of oldest unserved client connection, shown as second"},
 		},
+		"config": {
+			"max_client_conn":   {GAUGE, "Maximum number of client connections allowed"},
+			"default_pool_size": {GAUGE, "Default pool size for each database"},
+		},
 	}
 )
 
@@ -137,19 +141,33 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 				database = columnData[idx].(string)
 			}
 
+			if (namespace == "config" && columnName == "key") {
+				columnName = columnData[0].(string)
+			}
+
 			if metricMapping, ok := mapping.columnMappings[columnName]; ok {
 				// Is this a metricy metric?
 				if metricMapping.discard {
 					continue
 				}
 
-				value, ok := dbToFloat64(columnData[idx])
+				data := columnData[idx]
+
+				if (namespace == "config") {
+					data = columnData[1]
+				}
+
+				value, ok := dbToFloat64(data)
 				if !ok {
 					nonfatalErrors = append(nonfatalErrors, errors.New(fmt.Sprintln("Unexpected error parsing column: ", namespace, columnName, columnData[idx])))
 					continue
 				}
 				// Generate the metric
-				ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database)
+				if (database == "") {
+					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value)
+				} else {
+					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database)
+				}
 			}
 		}
 	}
@@ -324,9 +342,15 @@ func makeDescMap(metricMaps map[string]map[string]ColumnMapping, namespace strin
 					},
 				}
 			case GAUGE:
+				var labels []string;
+
+				if (metricNamespace != "config") {
+					labels = append(labels, "database")
+				}
+
 				thisMap[columnName] = MetricMap{
 					vtype: prometheus.GaugeValue,
-					desc:  prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", namespace, metricNamespace, columnName), columnMapping.description, []string{"database"}, nil),
+					desc:  prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", namespace, metricNamespace, columnName), columnMapping.description, labels, nil),
 					conversion: func(in interface{}) (float64, bool) {
 						return dbToFloat64(in)
 					},
