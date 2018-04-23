@@ -1,0 +1,12 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+  echo "Give me a tag to build, please." >&2
+  exit 1
+fi
+
+docker build --build-arg=http_proxy=$http_proxy -t registry.discourse.org:5000/pgbouncer_exporter:$1 .
+
+if [ -n "$PUSH" ]; then
+  docker push registry.discourse.org:5000/pgbouncer_exporter:$1
+fi
