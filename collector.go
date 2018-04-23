@@ -17,20 +17,15 @@ var (
 	metricMaps = map[string]map[string]ColumnMapping{
 		"stats": {
 			"avg_query_count":           {GAUGE, "Average queries per second in last stat period"},
-			"avg_query":                 {GAUGE, "The average query duration, shown as microsecond"},
 			"avg_query_time":            {GAUGE, "Average query duration in microseconds"},
 			"avg_recv":                  {GAUGE, "Average received (from clients) bytes per second"},
-			"avg_req":                   {GAUGE, "The average number of requests per second in last stat period, shown as request/second"},
 			"avg_sent":                  {GAUGE, "Average sent (to clients) bytes per second"},
 			"avg_wait_time":             {GAUGE, "Time spent by clients waiting for a server in microseconds (average per second)"},
 			"avg_xact_count":            {GAUGE, "Average transactions per second in last stat period"},
 			"avg_xact_time":             {GAUGE, "Average transaction duration in microseconds"},
-			"bytes_received_per_second": {GAUGE, "The total network traffic received, shown as byte/second"},
-			"bytes_sent_per_second":     {GAUGE, "The total network traffic sent, shown as byte/second"},
 			"total_query_count":         {GAUGE, "Total number of SQL queries pooled"},
 			"total_query_time":          {GAUGE, "Total number of microseconds spent by pgbouncer when actively connected to PostgreSQL, executing queries"},
 			"total_received":            {GAUGE, "Total volume in bytes of network traffic received by pgbouncer, shown as bytes"},
-			"total_requests":            {GAUGE, "Total number of SQL requests pooled by pgbouncer, shown as requests"},
 			"total_sent":                {GAUGE, "Total volume in bytes of network traffic sent by pgbouncer, shown as bytes"},
 			"total_wait_time":           {GAUGE, "Time spent by clients waiting for a server in microseconds"},
 			"total_xact_count":          {GAUGE, "Total number of SQL transactions pooled"},
@@ -45,6 +40,10 @@ var (
 			"sv_tested":  {GAUGE, "Server connections currently running either server_reset_query or server_check_query, shown as connection"},
 			"sv_login":   {GAUGE, "Server connections currently in the process of logging in, shown as connection"},
 			"maxwait":    {GAUGE, "Age of oldest unserved client connection, shown as second"},
+		},
+		"databases": {
+			"pool_size":           {GAUGE, "Maximum number of server connections"},
+			"current_connections": {GAUGE, "Current number of client connections"},
 		},
 		"config": {
 			"max_client_conn":   {GAUGE, "Maximum number of client connections allowed"},
