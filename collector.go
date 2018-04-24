@@ -41,6 +41,16 @@ var (
 			"sv_login":   {GAUGE, "Server connections currently in the process of logging in, shown as connection"},
 			"maxwait":    {GAUGE, "Age of oldest unserved client connection, shown as second"},
 		},
+		"lists": {
+			"databases":     {GAUGE, "Count of databases"},
+			"users":         {GAUGE, "Count of users"},
+			"pools":         {GAUGE, "Count of pools"},
+			"free_clients":  {GAUGE, "Count of free clients"},
+			"used_clients":  {GAUGE, "Count of used clients"},
+			"login_clients": {GAUGE, "Count of clients in login state"},
+			"free_servers":  {GAUGE, "Count of free servers"},
+			"used_servers":  {GAUGE, "Count of used servers"},
+		},
 		"databases": {
 			"pool_size":           {GAUGE, "Maximum number of server connections"},
 			"current_connections": {GAUGE, "Current number of client connections"},
@@ -140,7 +150,9 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 				database = columnData[idx].(string)
 			}
 
-			if (namespace == "config" && columnName == "key") {
+			if ((namespace == "config" && columnName == "key") ||
+					(namespace == "lists" && columnName == "list")) {
+
 				columnName = columnData[0].(string)
 			}
 
@@ -152,7 +164,7 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 
 				data := columnData[idx]
 
-				if (namespace == "config") {
+				if (namespace == "config" || namespace == "lists") {
 					data = columnData[1]
 				}
 
@@ -343,7 +355,7 @@ func makeDescMap(metricMaps map[string]map[string]ColumnMapping, namespace strin
 			case GAUGE:
 				var labels []string;
 
-				if (metricNamespace != "config") {
+				if (metricNamespace != "config" && metricNamespace != "lists") {
 					labels = append(labels, "database")
 				}
 
