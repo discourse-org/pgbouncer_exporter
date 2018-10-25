@@ -354,10 +354,11 @@ func makeDescMap(metricMaps map[string]map[string]ColumnMapping, namespace strin
 		for columnName, columnMapping := range mappings {
 			// Determine how to convert the column based on its usage.
 			switch columnMapping.usage {
+			// this line makes no sense... where is the COUNTER
 			case COUNTER:
 				thisMap[columnName] = MetricMap{
 					vtype: prometheus.CounterValue,
-					desc:  prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", namespace, metricNamespace, columnName), columnMapping.description, []string{"database"}, nil),
+					desc:  prometheus.NewDesc(fmt.Sprintf("%s_%s_%s", namespace, metricNamespace, columnName), columnMapping.description, []string{"database", "user"}, nil),
 					conversion: func(in interface{}) (float64, bool) {
 						return dbToFloat64(in)
 					},
@@ -367,6 +368,7 @@ func makeDescMap(metricMaps map[string]map[string]ColumnMapping, namespace strin
 
 				if metricNamespace != "config" && metricNamespace != "lists" {
 					labels = append(labels, "database")
+					labels = append(labels, "user")
 				}
 
 				thisMap[columnName] = MetricMap{
