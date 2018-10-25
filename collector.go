@@ -16,20 +16,20 @@ import (
 var (
 	metricMaps = map[string]map[string]ColumnMapping{
 		"stats": {
-			"avg_query_count":           {GAUGE, "Average queries per second in last stat period"},
-			"avg_query_time":            {GAUGE, "Average query duration in microseconds"},
-			"avg_recv":                  {GAUGE, "Average received (from clients) bytes per second"},
-			"avg_sent":                  {GAUGE, "Average sent (to clients) bytes per second"},
-			"avg_wait_time":             {GAUGE, "Time spent by clients waiting for a server in microseconds (average per second)"},
-			"avg_xact_count":            {GAUGE, "Average transactions per second in last stat period"},
-			"avg_xact_time":             {GAUGE, "Average transaction duration in microseconds"},
-			"total_query_count":         {GAUGE, "Total number of SQL queries pooled"},
-			"total_query_time":          {GAUGE, "Total number of microseconds spent by pgbouncer when actively connected to PostgreSQL, executing queries"},
-			"total_received":            {GAUGE, "Total volume in bytes of network traffic received by pgbouncer, shown as bytes"},
-			"total_sent":                {GAUGE, "Total volume in bytes of network traffic sent by pgbouncer, shown as bytes"},
-			"total_wait_time":           {GAUGE, "Time spent by clients waiting for a server in microseconds"},
-			"total_xact_count":          {GAUGE, "Total number of SQL transactions pooled"},
-			"total_xact_time":           {GAUGE, "Total number of microseconds spent by pgbouncer when connected to PostgreSQL in a transaction, either idle in transaction or executing queries"},
+			"avg_query_count":   {GAUGE, "Average queries per second in last stat period"},
+			"avg_query_time":    {GAUGE, "Average query duration in microseconds"},
+			"avg_recv":          {GAUGE, "Average received (from clients) bytes per second"},
+			"avg_sent":          {GAUGE, "Average sent (to clients) bytes per second"},
+			"avg_wait_time":     {GAUGE, "Time spent by clients waiting for a server in microseconds (average per second)"},
+			"avg_xact_count":    {GAUGE, "Average transactions per second in last stat period"},
+			"avg_xact_time":     {GAUGE, "Average transaction duration in microseconds"},
+			"total_query_count": {GAUGE, "Total number of SQL queries pooled"},
+			"total_query_time":  {GAUGE, "Total number of microseconds spent by pgbouncer when actively connected to PostgreSQL, executing queries"},
+			"total_received":    {GAUGE, "Total volume in bytes of network traffic received by pgbouncer, shown as bytes"},
+			"total_sent":        {GAUGE, "Total volume in bytes of network traffic sent by pgbouncer, shown as bytes"},
+			"total_wait_time":   {GAUGE, "Time spent by clients waiting for a server in microseconds"},
+			"total_xact_count":  {GAUGE, "Total number of SQL transactions pooled"},
+			"total_xact_time":   {GAUGE, "Total number of microseconds spent by pgbouncer when connected to PostgreSQL in a transaction, either idle in transaction or executing queries"},
 		},
 		"pools": {
 			"cl_active":  {GAUGE, "Client connections linked to server connection and able to process queries, shown as connection"},
@@ -135,6 +135,11 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 
 	for rows.Next() {
 		var database string
+		var user string
+
+		database = ""
+		user = ""
+
 		err = rows.Scan(scanArgs...)
 		if err != nil {
 			return []error{}, errors.New(fmt.Sprintln("Error retrieving rows:", namespace, err))
@@ -150,8 +155,13 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 				database = columnData[idx].(string)
 			}
 
-			if ((namespace == "config" && columnName == "key") ||
-					(namespace == "lists" && columnName == "list")) {
+			if columnName == "user" {
+				log.Debug("Fetching data for row belonging to user", columnData[idx])
+				user = columnData[idx].(string)
+			}
+
+			if (namespace == "config" && columnName == "key") ||
+				(namespace == "lists" && columnName == "list") {
 
 				columnName = columnData[0].(string)
 			}
@@ -164,7 +174,7 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 
 				data := columnData[idx]
 
-				if (namespace == "config" || namespace == "lists") {
+				if namespace == "config" || namespace == "lists" {
 					data = columnData[1]
 				}
 
@@ -174,10 +184,12 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 					continue
 				}
 				// Generate the metric
-				if (database == "") {
+				if database == "" {
 					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value)
-				} else {
+				} else if user == "" {
 					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database)
+				} else {
+					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database, user)
 				}
 			}
 		}
@@ -353,9 +365,9 @@ func makeDescMap(metricMaps map[string]map[string]ColumnMapping, namespace strin
 					},
 				}
 			case GAUGE:
-				var labels []string;
+				var labels []string
 
-				if (metricNamespace != "config" && metricNamespace != "lists") {
+				if metricNamespace != "config" && metricNamespace != "lists" {
 					labels = append(labels, "database")
 				}
 
