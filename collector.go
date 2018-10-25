@@ -186,8 +186,6 @@ func queryNamespaceMapping(ch chan<- prometheus.Metric, db *sql.DB, namespace st
 				// Generate the metric
 				if database == "" {
 					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value)
-				} else if user == "" {
-					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database)
 				} else {
 					ch <- prometheus.MustNewConstMetric(metricMapping.desc, metricMapping.vtype, value, database, user)
 				}
